@@ -5,23 +5,22 @@ from pydub import AudioSegment
 import librosa
 import numpy as np
 from scipy.stats import uniform
+import itertools
+import time
+import datetime
 
 ##### GLOBAL DEFINITIONS #####
 
 vcodec =   "libx264"
 videoquality = "24"
 compression = "slow"
-min_interval_between_beats = 3 #minimal time interval between beats (seconds)
+min_interval_between_beats = 2 #minimal time interval between beats (seconds)
 
 ##### PARAMETERS #####
 
 input_music_path = 'music.mp3'
-input_video_paths = ['exemple_1.mp4', 'exemple_2.mp4', 'exemple_3.mp4']
-output_video_path = 'output.mp4'
-
-# modify these start and end times for your subclips
-'''cuts = [('00:00:02.949', '00:00:20.152'),
-        ('00:00:30.328', '00:00:40.077')]'''
+input_video_paths = ['example_data/example_1.mp4', 'example_data/example_2.mp4', 'example_data/example_3.mp4', 'example_data/example_4.mp4']
+output_video_path = 'example_data/output.mp4'
 
 ##### FUNCTIONS #####
 
@@ -77,78 +76,56 @@ def cut_and_mute_video(video_object, time_limits):
     muted_clip = clip.without_audio() #mutting video
     return muted_clip
 
-def add_audio_to_video(video, audio):
+def add_audio_to_video(video, music_path):
 
     """Adds audio to video clip"""
-
-    videoclip = video.set_audio(audio)
+    music = mpy.AudioFileClip(music_path) 
+    videoclip = video.set_audio(music)
     return videoclip
 
-'''
-def convert_into_time_cuts(new_beat_times):
+def calculate_interval_sizes(new_beat_times):
 
-    # Formato tem que ser 
-    # cuts = [('00:00:02.949', '00:00:20.152'), ('00:00:30.328', '00:00:40.077')]
+    """Calculate interval sizes of videos we need"""
 
-    clip_cuts = []
-    begin_beat = 0
+    interval_sizes = []
+    start_time = 0
 
-    for beat in new_beat_times: # tem que ser em pares
+    for beat in new_beat_times:
+        interval = beat - start_time
+        interval_sizes.append(interval)
+        start_time = beat
 
-            
-        clip_cuts.append(cut)
-        
+    return interval_sizes
 
-    return clip_cuts
+def get_video_scenes(interval_sizes):
 
-def edit_video(loadtitle, savetitle, cuts):
-    
-    # cut file
-    clips = []
-    for cut in cuts:
+    cursors = {}
+    for video in input_video_paths:
+        cursors[video] = 0
 
-        # load file
-        video = mpy.VideoFileClip(loadtitle)
-
-        clip = cut_and_mute_video(video, cut)
-        clips.append(clip)
-
-
-    final_clip = mpy.concatenate_videoclips(clips)
-
-
-    # putting music into cutted video
-
-    music = mpy.AudioFileClip("music.mp3") 
-    final_clip = add_audio_to_video(final_clip, music)
-
-    # save file
-    final_clip.write_videofile(savetitle, threads=4, fps=24,
-                               codec=vcodec,
-                               preset=compression,
-                               ffmpeg_params=["-crf",videoquality])
-
+    video_scenes_list = []
+    for interval, video_path in zip(interval_sizes, itertools.cycle(input_video_paths)):
+        begining = str(datetime.timedelta(seconds = cursors[video_path]))
+        end = str(datetime.timedelta(seconds = cursors[video_path] + interval))
+        cursors[video_path] = cursors[video_path] + interval
+        time_limits = [begining, end]
+        video = mpy.VideoFileClip(video_path)
+        video_scene = cut_and_mute_video(video, time_limits)
+        video_scenes_list.append(video_scene)
     video.close()
-'''
+    return video_scenes_list
 
 if __name__ == '__main__':
 
     beat_times = get_beat_times(input_music_path)
     new_beat_times = standardize_beat_times(beat_times, min_interval_between_beats)
+    interval_sizes = calculate_interval_sizes(new_beat_times)
+    video_scenes_list = get_video_scenes(interval_sizes)
+    final_video = mpy.concatenate_videoclips(video_scenes_list)
+    final_clip = add_audio_to_video(final_video, input_music_path)
+    final_clip.write_videofile(output_video_path, threads=4, fps=24,
+                               codec=vcodec,
+                               preset=compression,
+                               ffmpeg_params=["-crf",videoquality])
 
-    print(new_beat_times)
-
-    #a partir dos beat times, deveremos descobrir os intervalos entre cada um dos beats, para saber o comprimento de pedaços de vídeos que precisamos
-
-    #com esses intervalos em mão, para cada vídeo de entrada iremos definir limites de tempo que representem uma parte do vídeo com um dos comprimentos (podemos seguir a ordem -> primeiro vídeo = primeiro intervalo)
-    #esse pedaço pode começar do ínicio, meio, aleatório ou fim do vídeo
-
-    #depois que tivermos esses limites, iremos realizar o corte de cada vídeo
-
-    #depois com todos os vídeos cortados, iremos juntar todos
-
-    #por fim, adicionaremos a música e salvaremos
-
-    #clip_cuts = convert_into_time_cuts(new_beat_times)
-
-    #edit_video(loadtitle, savetitle, cuts)
+    
