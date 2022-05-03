@@ -37,11 +37,11 @@ def time_graph(path):
     #     if power_smooth[index] < 12000:
     #         power_smooth[index] = 0
 
-    for index in range(len(power_smooth)):
-        if power_smooth[index] < 0:
-            power_smooth[index] = 0
-        if power_smooth[index] < 5000:
-            power_smooth[index] = 0
+    # for index in range(len(power_smooth)):
+    #     if power_smooth[index] < 0:
+    #         power_smooth[index] = 0
+    #     if power_smooth[index] < 5000:
+    #         power_smooth[index] = 0
 
 
     plt.figure(2)
@@ -62,13 +62,27 @@ def time_graph(path):
 
 if __name__ == "__main__":
    
-    # gets the command line Value
-    path = sys.argv[1]
+    # # gets the command line Value
+    # path = sys.argv[1]
 
-    if path.endswith('.mp3'):
-        sound = AudioSegment.from_mp3(path)
-        sound.export(os.path.splitext(path)[0]+'.wav', format="wav")
-        time_graph(os.path.splitext(path)[0]+'.wav')
-    else:
-        time_graph(path)
-    # visualize(path)
+    # if path.endswith('.mp3'):
+    #     sound = AudioSegment.from_mp3(path)
+    #     sound.export(os.path.splitext(path)[0]+'.wav', format="wav")
+    #     time_graph(os.path.splitext(path)[0]+'.wav')
+    # else:
+    #     time_graph(path)
+    # # visualize(path)
+
+
+
+    # import modules
+    import librosa 
+    import IPython.display as ipd 
+
+    # read audio file 
+    x, sr = librosa.load("data/test2.wav") 
+    ipd.Audio(x, rate=sr)
+
+    tempo, beat_times = librosa.beat.beat_track(x, sr=sr, start_bpm=60, units='time')
+    clicks = librosa.clicks(beat_times, sr=sr, length=len(x))
+    ipd.Audio(x + clicks, rate=sr)
