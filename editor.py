@@ -10,13 +10,17 @@ import time
 import datetime
 import os
 import soundfile as sf
+import traceback
+import random
+
+from utils import remove_temp_files
 
 
 class Editor:
     vcodec =   "libx264"
     videoquality = "24"
     compression = "slow"
-    min_interval_between_beats = 2 #minimal time interval between beats (seconds)
+    min_interval_between_moments = 2
 
     input_music_path = 'example_data/music.mp3'
     input_video_paths = ['example_data/example_1.mp4', 'example_data/example_2.mp4', 'example_data/example_3.mp4', 'example_data/example_4.mp4']
@@ -27,20 +31,20 @@ class Editor:
     clicks = None
     clicks_moments = []
 
-    originall_beat_times = None
-    beat_times = None
+    originall_moments = None
+    moments = None
 
     final_video = None
 
-    def __init__(self, input_music_path=None, input_video_paths=None, output_video_path=None, min_interval_between_beats=2):
+    def __init__(self, input_music_path=None, input_video_paths=None, output_video_path=None):
         if input_music_path!=None:
             self.input_music_path = input_music_path
         if input_video_paths!=None:
             self.input_video_paths = input_video_paths
+            random.shuffle(self.input_video_paths)
         if output_video_path!=None:
             self.output_video_path = output_video_path
         
-        self.min_interval_between_beats = min_interval_between_beats
     
     def set_vcodec(self, vcodec):
         """Sets video codec"""
@@ -54,9 +58,9 @@ class Editor:
         """Sets compression"""
         self.compression = compression
     
-    def set_min_interval_between_beats(self, min_interval_between_beats):
+    def set_min_interval_between_moments(self, min_interval_between_moments):
         """Sets minimal time interval between beats"""
-        self.min_interval_between_beats = min_interval_between_beats
+        self.min_interval_between_moments = min_interval_between_moments
 
     def read_mp3(self, music_path):
         """MP3 to numpy array"""
@@ -75,7 +79,7 @@ class Editor:
         self.music_wave = y
         
 
-    def get_beat_times(self):
+    def get_moments(self):
         """Detects beat times from music_path"""
         
         self.read_mp3(self.input_music_path)
@@ -84,24 +88,27 @@ class Editor:
         prior = uniform(30, 300)
         utempo = librosa.beat.tempo(onset_envelope = onset_env, sr = self.music_sr, prior = prior)[0]
 
-        _, beat_times = librosa.beat.beat_track(y = self.music_wave, sr = self.music_sr, units = 'time', bpm = utempo)
+        if self.method=='beat':
+            _, moments = librosa.beat.beat_track(y = self.music_wave, sr = self.music_sr, units = 'time', bpm = utempo)
+        elif self.method=='onset':
+            moments = librosa.onset.onset_detect(y = self.music_wave, sr = self.music_sr, units = 'time')
 
-        return beat_times
+        return moments
 
-    def standardize_beat_times(self):
+    def standardize_moments(self):
         """Shorttens the intervals between beats"""
 
-        new_beat_times = []
+        new_moments = []
         previous_beat = 0
 
-        for beat in self.beat_times:
-            if (beat - previous_beat) >= self.min_interval_between_beats:
-                new_beat_times.append(beat) 
+        for beat in self.moments:
+            if (beat - previous_beat) >= self.min_interval_between_moments:
+                new_moments.append(beat) 
                 previous_beat = beat
 
-        self.clicks_moments = librosa.clicks(new_beat_times, sr=self.music_sr, length=len(self.music_wave))
-        self.originall_beat_times = self.beat_times
-        self.beat_times = new_beat_times
+        self.clicks_moments = librosa.clicks(new_moments, sr=self.music_sr, length=len(self.music_wave))
+        self.originall_moments = self.moments
+        self.moments = new_moments
 
 
     def cut_and_mute_video(self, video_object, time_limits):
@@ -127,7 +134,7 @@ class Editor:
         interval_sizes = []
         start_time = 0
 
-        for beat in self.beat_times:
+        for beat in self.moments:
             interval = beat - start_time
             interval_sizes.append(interval)
             start_time = beat
@@ -150,7 +157,6 @@ class Editor:
             video = mpy.VideoFileClip(video_path)
             video_scene = self.cut_and_mute_video(video, time_limits)
             video_scenes_list.append(video_scene)
-        video.close()
         return video_scenes_list
     
     def concatenate_videos(self, video_scenes_list):
@@ -161,20 +167,27 @@ class Editor:
 
     def write_video(self, threads=4, fps=24):
         """Writes video"""
-        self.final_video.write_videofile(self.output_video_path, threads=threads, fps=fps,
-                               codec=self.vcodec,
-                               preset=self.compression,
-                               ffmpeg_params=["-crf",self.videoquality])
-        if self.clicks:
-            os.remove(self.input_music_path.replace('.mp3','_clicks.wav'))
 
-    def merge(self, clicks=False):
+        
+        self.final_video.write_videofile(self.output_video_path,
+                                         threads=threads,
+                                         fps=fps,
+                                         codec=self.vcodec,
+                                         preset=self.compression,
+                                         ffmpeg_params=["-crf",self.videoquality])
+        
+        remove_temp_files()
+
+    def merge(self, method='beat', clicks=False, min_interval_between_moments=2):
         """Runs the whole process"""
+        self.method = method
         self.clicks = clicks
+        self.min_interval_between_moments = min_interval_between_moments
+        
         print('Reading music and get beat times...')
-        self.beat_times = self.get_beat_times()
+        self.moments = self.get_moments()
         print('Standardizing beat times...')
-        self.standardize_beat_times()
+        self.standardize_moments()
         print('Calculating interval beats...')
         interval_sizes = self.calculate_interval_sizes()
         print('Getting video scenes...')
