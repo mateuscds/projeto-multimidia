@@ -7,8 +7,8 @@ import fnmatch
 def remove_temp_files():
     """Removes all temp files"""
     path = os.getcwd()
-    files = glob.glob(path + '/*', recursive=True)
-
+    files = glob.glob(path + '/**', recursive=True)
+    
     for file in files:
         if 'TEMP' in file:
             os.remove(file)
