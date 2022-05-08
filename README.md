@@ -12,5 +12,9 @@
 pip install -r requirements.txt
 ```
 ```
-python3 teste.py
+python3 interface.py
+```
+Ou (sem interface)
+```
+python3 test.py
 ```
