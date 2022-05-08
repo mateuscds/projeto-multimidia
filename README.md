@@ -12,7 +12,7 @@
 pip install -r requirements.txt
 ```
 ```
-python3 interface.py
+python3 main.py
 ```
 Ou (sem interface)
 ```
