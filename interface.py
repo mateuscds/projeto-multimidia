@@ -94,14 +94,14 @@ class VideoclipMaker(QWidget):
 			input_video_paths = []
 			for path in onlyfiles:
 				if path.endswith('.mp4'):
-					input_video_paths.append(path)
+					input_video_paths.append(self.video_folder_path+'/'+path)
 			
 			#default que definimos
 			min_interval_between_moments = 2
 			method = 'onset'
 			clicks = False
 
-			editor = Editor(self.music_path, input_video_paths, self.output_video_filename)
+			editor = Editor(self.music_path, input_video_paths, self.output_video_filename[0])
 			editor.merge(method, clicks, min_interval_between_moments)
 
 			#import time 

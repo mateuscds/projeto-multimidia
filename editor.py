@@ -6,11 +6,8 @@ import librosa
 import numpy as np
 from scipy.stats import uniform
 import itertools
-import time
 import datetime
-import os
 import soundfile as sf
-import traceback
 import random
 
 from utils import remove_temp_files
@@ -67,6 +64,8 @@ class Editor:
         
         a = AudioSegment.from_mp3(music_path)
         y = np.array(a.get_array_of_samples(), dtype = np.float32) / 2**15
+
+        self.music_length = a.duration_seconds
         
         if a.channels == 2:
             y = y.reshape((-1, 2))
@@ -138,6 +137,8 @@ class Editor:
             interval = beat - start_time
             interval_sizes.append(interval)
             start_time = beat
+        
+        interval_sizes.append(self.music_length - start_time)
 
         return interval_sizes
 
