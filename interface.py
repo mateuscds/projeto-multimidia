@@ -101,7 +101,7 @@ class VideoclipMaker(QWidget):
 			method = 'onset'
 			clicks = False
 
-			editor = Editor(self.music_path, input_video_paths, self.output_video_filename[0])
+			editor = Editor(self.music_path, input_video_paths, self.output_video_filename[0]+'.mp4')
 			editor.merge(method, clicks, min_interval_between_moments)
 
 			#import time 
