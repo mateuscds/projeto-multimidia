@@ -13,7 +13,7 @@ import random
 from utils import remove_temp_files
 
 
-class Editor:
+class SynchroEditor:
     vcodec =   "libx264"
     videoquality = "24"
     compression = "slow"

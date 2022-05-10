@@ -1,4 +1,4 @@
-from editor import Editor
+from synchroeditor import SynchroEditor
 from utils import remove_temp_files
 
 input_music_path = 'input/music/music1.mp3'
@@ -12,5 +12,5 @@ min_interval_between_moments = 2
 method = 'onset'
 clicks = False
 
-editor = Editor(input_music_path, input_video_paths, output_video_path)
+editor = SynchroEditor(input_music_path, input_video_paths, output_video_path)
 editor.merge(method, clicks, min_interval_between_moments)
