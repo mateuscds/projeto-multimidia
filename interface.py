@@ -103,10 +103,14 @@ class SynchroEditorUI(QWidget):
 				input_video_paths = []
 				for path in onlyfiles:
 					if path.endswith('.mp4'):
-						input_video_paths.append(path)
+						input_video_paths.append(self.video_folder_path+'/'+path)				
+				
+				out_file = self.output_video_filename[0]
+				if '.mp4' not in self.output_video_filename[0]:
+					out_file+='.mp4'
 				
 				#fazendo a chamada de edição dos vídeos
-				synchro_editor = SynchroEditor(self.music_path, input_video_paths, self.output_video_filename)
+				synchro_editor = SynchroEditor(self.music_path, input_video_paths, out_file)
 				synchro_editor.merge(method, clicks, min_interval_between_moments)
 
 				QApplication.restoreOverrideCursor()
